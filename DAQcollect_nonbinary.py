@@ -58,6 +58,13 @@ def main():
     scan_options = ScanOption.CONTINUOUS
     flags = AInScanFlag.DEFAULT
 
+    #CONTROL ALGORITHM PARAMETERS:
+    velocity = 1    #tune speed
+    beta = 0        #tune turning
+    heading = 0
+    past_freq = f_transmit
+    dH = 0
+
     try:
         # Get descriptors for all of the available DAQ devices.
         devices = get_daq_device_inventory(interface_type)
@@ -158,11 +165,17 @@ def main():
                         s = "\n"
                         start_dump = time.time()
                         f.write(s.join(data_dump)+'\n')
+                        #find fundamental frequency
                         frequency_domain = np.fft.fftshift(abs(np.fft.fft(np.array(data_fft))))
                         freqs = np.fft.fftshift(np.fft.fftfreq(len(data_fft),1/float(rate)))
                         doppler_freqs = freqs[np.where(np.logical_and(freqs>=f_transmit-500, freqs<=f_transmit+500))]
                         doppler_vals = frequency_domain[np.where(np.logical_and(freqs>=f_transmit-500, freqs<=f_transmit+500))]
-                        print(doppler_freqs[np.argmax(doppler_vals)])
+                        #new heading
+                        freq = doppler_freqs[np.argmax(doppler_vals)]
+                        dH = (freq-past_freq)*np.sign(dH)*beta
+                        heading = heading + dH
+                        past_freq = freq
+                        print('HEADING:'+str(heading))
 
                     if past_index>index:
                         data_dump = []
@@ -175,11 +188,17 @@ def main():
                         s = "\n"
                         start_dump = time.time()
                         f.write(s.join(data_dump)+'\n')
+                        #find fundamental frequency
                         frequency_domain = np.fft.fftshift(abs(np.fft.fft(np.array(data_fft))))
                         freqs = np.fft.fftshift(np.fft.fftfreq(len(data_fft),1/float(rate)))
                         doppler_freqs = freqs[np.where(np.logical_and(freqs>=f_transmit-500, freqs<=f_transmit+500))]
                         doppler_vals = frequency_domain[np.where(np.logical_and(freqs>=f_transmit-500, freqs<=f_transmit+500))]
-                        print(doppler_freqs[np.argmax(doppler_vals)])
+                        #new heading
+                        freq = doppler_freqs[np.argmax(doppler_vals)]
+                        dH = (freq-past_freq)*np.sign(dH)*beta
+                        heading = heading + dH
+                        past_freq = freq
+                        print('HEADING:'+str(heading))
 
                     past_index = index
                 except (ValueError, NameError, SyntaxError):
