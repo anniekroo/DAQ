@@ -31,7 +31,8 @@ import time
 from os import system
 from sys import stdout
 import pickle
-
+import numpy as np
+from matplotlib import pyplot as plt
 from uldaq import (get_daq_device_inventory, DaqDevice, AInScanFlag, ScanStatus,
                    ScanOption, create_float_buffer, InterfaceType, AiInputMode)
 
@@ -45,13 +46,14 @@ def main():
     range_index = 0
     interface_type = InterfaceType.USB
     low_channel = 0
-    high_channel = 4
-    rate = 10000/5                    # 50k Samples/second/channel
-    buffer_length = 50000
+    high_channel = 0
+    rate = 100000                # Samples/second/channel
+    buffer_length = 200000
+    f_transmit = 20000          # fundamental frequency of transmitter
     channel_num = high_channel-low_channel+1
-    samples_per_channel = buffer_length/5
+    samples_per_channel = int(float(buffer_length)/float(channel_num))
     file_length = 2             # Seconds
-    rows_of_data = (buffer_length/channel_num)/2 *2*file_length
+    rows_of_data = (float(file_length)/((float(buffer_length)/2)/(float(rate)*float(channel_num))))*((float(buffer_length)/2)/float(channel_num))
     print("NUMBER OF ROWS IN THE OUTPUT FILE:" +str(rows_of_data))
     scan_options = ScanOption.CONTINUOUS
     flags = AInScanFlag.DEFAULT
@@ -146,24 +148,33 @@ def main():
 
                     if past_index<=threshold and index>threshold:
                         data_dump = []
+                        data_fft = []
                         for i in range(int(threshold)):
                             if i%channel_count == 0:
                                 row_data = str(data[i:i+channel_count])
+                                data_fft.append(data[i])
                                 data_dump.append(row_data[1:-1])
                         s = "\n"
                         start_dump = time.time()
                         f.write(s.join(data_dump)+'\n')
-                        print("Dump Time:"+str(time.time()-start_dump))
+                        frequency_domain = np.fft.fftshift(abs(np.fft.fft(np.array(data_fft))))
+                        freqs = np.fft.fftshift(np.fft.fftfreq(len(data_fft),1/float(rate)))
+                        doppler_freqs = freqs[np.where(np.logical_and(freqs>=f_transmit-500, freqs<=f_transmit+500))]
+                        doppler_vals = frequency_domain[np.where(np.logical_and(freqs>=f_transmit-500, freqs<=f_transmit+500))]
+                        print(doppler_freqs[np.argmax(doppler_vals)])
 
                     if past_index>index:
+                        data_dump = []
+                        data_fft = []
                         for i in range(int(threshold),len(data)):
                             if i%channel_count == 0:
                                 row_data = str(data[i:i+channel_count])
+                                data_fft.append(data[i])
                                 data_dump.append(row_data[1:-1])
                         s = "\n"
                         start_dump = time.time()
                         f.write(s.join(data_dump)+'\n')
-                        print("Dump Time:"+str(time.time()-start_dump))
+
 
                     past_index = index
                 except (ValueError, NameError, SyntaxError):
