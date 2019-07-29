@@ -128,7 +128,8 @@ def main():
                                    rate, scan_options, flags, data)
 
         start=time.time()
-        f=open('./data/'+'{:.6f}'.format(start)+".txt",'ab')
+        f=open('./data/'+'{:.6f}'.format(start)+".txt",'a')
+                # REMOVED BINARY MODE 'ab' DUE TO ERROR ON BRENDAN'S LINUX MACHINE DUE TO 'str'
         old_index=0
         working=[0] * (channel_count+1)
 
@@ -142,8 +143,8 @@ def main():
                     if time.time()-start>=file_length:
                         f.close
                         start=time.time()
-                        f=open('./data/'+'{:.6f}'.format(start)+".txt",'ab')
-
+                        f=open('./data/'+'{:.6f}'.format(start)+".txt",'a')
+                        # REMOVED BINARY MODE 'ab' DUE TO ERROR ON BRENDAN'S LINUX MACHINE DUE TO 'str'
                     index = transfer_status.current_index
 
                     if past_index<=threshold and index>threshold:
@@ -174,7 +175,11 @@ def main():
                         s = "\n"
                         start_dump = time.time()
                         f.write(s.join(data_dump)+'\n')
-
+                        frequency_domain = np.fft.fftshift(abs(np.fft.fft(np.array(data_fft))))
+                        freqs = np.fft.fftshift(np.fft.fftfreq(len(data_fft),1/float(rate)))
+                        doppler_freqs = freqs[np.where(np.logical_and(freqs>=f_transmit-500, freqs<=f_transmit+500))]
+                        doppler_vals = frequency_domain[np.where(np.logical_and(freqs>=f_transmit-500, freqs<=f_transmit+500))]
+                        print(doppler_freqs[np.argmax(doppler_vals)])
 
                     past_index = index
                 except (ValueError, NameError, SyntaxError):
