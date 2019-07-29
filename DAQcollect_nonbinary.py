@@ -49,7 +49,7 @@ def main():
     high_channel = 0
     rate = 100000                # Samples/second/channel
     buffer_length = 200000
-    f_transmit = 20000          # fundamental frequency of transmitter
+    f_transmit = 45000          # fundamental frequency of transmitter
     channel_num = high_channel-low_channel+1
     samples_per_channel = int(float(buffer_length)/float(channel_num))
     file_length = 2             # Seconds
