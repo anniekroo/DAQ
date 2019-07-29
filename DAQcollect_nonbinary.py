@@ -28,6 +28,7 @@
 from __future__ import print_function
 from time import sleep
 import time
+import subprocess as sp
 from os import system
 from sys import stdout
 import pickle
@@ -174,6 +175,7 @@ def main():
                         freq = doppler_freqs[np.argmax(doppler_vals)]
                         dH = (freq-past_freq)*np.sign(dH)*beta
                         heading = heading + dH
+                        return_val = sp.call(["echo",heading_str,">>","log.txt"])
                         past_freq = freq
                         print('HEADING:'+str(heading))
 
@@ -197,6 +199,7 @@ def main():
                         freq = doppler_freqs[np.argmax(doppler_vals)]
                         dH = (freq-past_freq)*np.sign(dH)*beta
                         heading = heading + dH
+                        return_val = sp.call(["echo",heading_str,">>","log.txt"])
                         past_freq = freq
                         print('HEADING:'+str(heading))
 

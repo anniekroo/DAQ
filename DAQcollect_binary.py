@@ -29,6 +29,7 @@ from __future__ import print_function
 from time import sleep
 import time
 from os import system
+import subprocess as sp
 from sys import stdout
 import pickle
 import numpy as np
@@ -64,6 +65,8 @@ def main():
     heading = 0
     past_freq = f_transmit
     dH = 0
+    heading_str = str(heading)
+
 
 
     try:
@@ -175,7 +178,9 @@ def main():
                         freq = doppler_freqs[np.argmax(doppler_vals)]
                         dH = (freq-past_freq)*np.sign(dH)*beta
                         heading = heading + dH
+                        return_val = sp.call(["echo",heading_str,">>","log.txt"])
                         past_freq = freq
+
                         print('HEADING:'+str(heading))
 
                     if past_index>index:
@@ -198,6 +203,7 @@ def main():
                         freq = doppler_freqs[np.argmax(doppler_vals)]
                         dH = (freq-past_freq)*np.sign(dH)*beta
                         heading = heading + dH
+                        return_val = sp.call(["echo",heading_str,">>","log.txt"])
                         past_freq = freq
                         print('HEADING:'+str(heading))
 
