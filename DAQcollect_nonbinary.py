@@ -61,7 +61,7 @@ def main():
 
     #CONTROL ALGORITHM PARAMETERS:
     velocity = 1    #tune speed
-    beta = 0        #tune turning
+    beta = 1        #tune turning
     heading = 0
     past_freq = f_transmit
     dH = 0
@@ -175,9 +175,10 @@ def main():
                         freq = doppler_freqs[np.argmax(doppler_vals)]
                         dH = (freq-past_freq)*np.sign(dH)*beta
                         heading = heading + dH
-                        return_val = sp.call(["echo",heading_str,">>","log.txt"])
+                        heading_str = str(heading)
+                        return_val = sp.call("echo %s >> log.txt &"% heading_str, shell=True)
                         past_freq = freq
-                        print('HEADING:'+str(heading))
+                        print('HEADING: %s     FREQ: %d' %(heading_str, past_freq))
 
                     if past_index>index:
                         data_dump = []
@@ -199,9 +200,11 @@ def main():
                         freq = doppler_freqs[np.argmax(doppler_vals)]
                         dH = (freq-past_freq)*np.sign(dH)*beta
                         heading = heading + dH
-                        return_val = sp.call(["echo",heading_str,">>","log.txt"])
+                        heading_str = str(heading)
+                        return_val = sp.call("echo %s >> log.txt &"% heading_str, shell=True)
                         past_freq = freq
-                        print('HEADING:'+str(heading))
+                        print('HEADING: %s     FREQ: %d' %(heading_str, past_freq))
+
 
                     past_index = index
                 except (ValueError, NameError, SyntaxError):
