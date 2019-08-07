@@ -41,9 +41,7 @@ import time
 import subprocess as sp
 from os import system
 from sys import (stdout,argv)
-import pickle
 import numpy as np
-from matplotlib import pyplot as plt
 from uldaq import (get_daq_device_inventory, DaqDevice, AInScanFlag, ScanStatus,
                    ScanOption, create_float_buffer, InterfaceType, AiInputMode)
 
