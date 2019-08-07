@@ -36,6 +36,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from uldaq import (get_daq_device_inventory, DaqDevice, AInScanFlag, ScanStatus,
                    ScanOption, create_float_buffer, InterfaceType, AiInputMode)
+import keyboard
 
 
 def main():
@@ -61,10 +62,10 @@ def main():
 
     #CONTROL ALGORITHM PARAMETERS:
     velocity = 1    #tune speed
-    beta = 1        #tune turning
+    beta = 0.01        #tune turning
     heading = 0
     past_freq = f_transmit
-    dH = 0
+    dH = -1.0001
 
     try:
         # Get descriptors for all of the available DAQ devices.
@@ -127,8 +128,8 @@ def main():
             input('\nHit ENTER to continue\n')
         except (NameError, SyntaxError):
             pass
-
         system('clear')
+        print('\nHit q to exit\n')
 
         threshold = (float(len(data))/2) - (float(len(data))/2)%channel_count
         # Start the acquisition.
@@ -140,79 +141,41 @@ def main():
                 # REMOVED BINARY MODE 'ab' DUE TO ERROR ON BRENDAN'S LINUX MACHINE DUE TO 'str'
         old_index=0
         working=[0] * (channel_count+1)
+        past_index = -1
+        while True:
+            #Get the status of the background operation
+            status, transfer_status = ai_device.get_scan_status()
 
-        try:
-            past_index = -1
-            while True:
-                try:
-                    # Get the status of the background operation
-                    status, transfer_status = ai_device.get_scan_status()
-
-                    if time.time()-start>=file_length:
-                        f.close
-                        start=time.time()
-                        f=open('./data/'+'{:.6f}'.format(start)+".txt",'a')
-                        # REMOVED BINARY MODE 'ab' DUE TO ERROR ON BRENDAN'S LINUX MACHINE DUE TO 'str'
-                    index = transfer_status.current_index
-
-                    if past_index<=threshold and index>threshold:
-                        data_dump = []
-                        data_fft = []
-                        for i in range(int(threshold)):
-                            if i%channel_count == 0:
-                                row_data = str(data[i:i+channel_count])
-                                data_fft.append(data[i])
-                                data_dump.append(row_data[1:-1])
-                        s = "\n"
-                        start_dump = time.time()
-                        f.write(s.join(data_dump)+'\n')
-                        #find fundamental frequency
-                        frequency_domain = np.fft.fftshift(abs(np.fft.fft(np.array(data_fft))))
-                        freqs = np.fft.fftshift(np.fft.fftfreq(len(data_fft),1/float(rate)))
-                        doppler_freqs = freqs[np.where(np.logical_and(freqs>=f_transmit-500, freqs<=f_transmit+500))]
-                        doppler_vals = frequency_domain[np.where(np.logical_and(freqs>=f_transmit-500, freqs<=f_transmit+500))]
-                        #new heading
-                        freq = doppler_freqs[np.argmax(doppler_vals)]
-                        dH = (freq-past_freq)*np.sign(dH)*beta
-                        heading = heading + dH
-                        heading_str = str(heading)
-                        return_val = sp.call("echo %s >> log.txt &"% heading_str, shell=True)
-                        past_freq = freq
-                        print('HEADING: %s     FREQ: %d' %(heading_str, past_freq))
-
-                    if past_index>index:
-                        data_dump = []
-                        data_fft = []
-                        for i in range(int(threshold),len(data)):
-                            if i%channel_count == 0:
-                                row_data = str(data[i:i+channel_count])
-                                data_fft.append(data[i])
-                                data_dump.append(row_data[1:-1])
-                        s = "\n"
-                        start_dump = time.time()
-                        f.write(s.join(data_dump)+'\n')
-                        #find fundamental frequency
-                        frequency_domain = np.fft.fftshift(abs(np.fft.fft(np.array(data_fft))))
-                        freqs = np.fft.fftshift(np.fft.fftfreq(len(data_fft),1/float(rate)))
-                        doppler_freqs = freqs[np.where(np.logical_and(freqs>=f_transmit-500, freqs<=f_transmit+500))]
-                        doppler_vals = frequency_domain[np.where(np.logical_and(freqs>=f_transmit-500, freqs<=f_transmit+500))]
-                        #new heading
-                        freq = doppler_freqs[np.argmax(doppler_vals)]
-                        dH = (freq-past_freq)*np.sign(dH)*beta
-                        heading = heading + dH
-                        heading_str = str(heading)
-                        return_val = sp.call("echo %s >> log.txt &"% heading_str, shell=True)
-                        past_freq = freq
-                        print('HEADING: %s     FREQ: %d' %(heading_str, past_freq))
-
-
-                    past_index = index
-                except (ValueError, NameError, SyntaxError):
-                    break
-        except KeyboardInterrupt:
-            pass
+            if time.time()-start>=file_length:
+                f.close
+                start=time.time()
+                f=open('./data/'+'{:.6f}'.format(start)+".txt",'a')
+                # REMOVED BINARY MODE 'ab' DUE TO ERROR ON BRENDAN'S LINUX MACHINE DUE TO 'str'
+            index = transfer_status.current_index
+            if past_index<=threshold and index>threshold:
+                data_range = range(int(threshold))
+                data_fft, data_dump = dump_data(f, data, data_range, channel_count)
+                #find fundamental frequency within 500Hz of f_transmit
+                doppler_freqs, doppler_vals = fourier_analysis(data_fft,rate,f_transmit,500)
+                #new heading
+                past_freq, heading, dH = heading_adjust(doppler_freqs, doppler_vals, past_freq, beta, heading, dH)
+                print('HEADING: %s     FREQ: %d    dH: %d' %(str(heading), past_freq,dH))
+            if past_index>index:
+                data_range = range(int(threshold),len(data))
+                data_fft, data_dump = dump_data(f, data, data_range, channel_count)
+                #find fundamental frequency within 500Hz of f_transmit
+                doppler_freqs, doppler_vals = fourier_analysis(data_fft,rate,f_transmit,500)
+                #new heading
+                past_freq, heading, dH = heading_adjust(doppler_freqs, doppler_vals, past_freq, beta, heading, dH)
+                print('HEADING: %s     FREQ: %d    dH: %d' %(str(heading), past_freq,dH))
+            past_index = index
+            #Quit data collection on keyboard press q
+            if keyboard.is_pressed('q'):  # if key 'q' is pressed
+                print('QUITTING!')
+                break
 
     except Exception as e:
+        print('OUTTER TRY FAILURE')
         print('\n', e)
 
     finally:
@@ -224,6 +187,47 @@ def main():
                 daq_device.disconnect()
             daq_device.release()
 
+def dump_data(f, data, data_range, channel_count):
+    '''
+    Function to take data buffer and save the buffer in the range specified by
+    data_range to a text file in the format of a csv. This will have as many
+    columns as there are channels. It will also create a variable data_fft
+    that contains all of the values of the first channel specified for more
+    processing.
+    '''
+    data_dump = []
+    data_fft = []
+    for i in data_range:
+        if i%channel_count == 0:
+            row_data = str(data[i:i+channel_count])
+            data_fft.append(data[i])
+            data_dump.append(row_data[1:-1])
+    s = "\n"
+    f.write(s.join(data_dump)+'\n')
+    return data_fft, data_dump
+
+def fourier_analysis(data_fft, rate, f_transmit, doppler_range):
+    '''
+    Function that takes data from a single channel (data_fft) and takes the fourier
+    transform. It then finds the maximum intensity within +- doppler_range from
+    the transmit frequency (f_transmit).
+    '''
+    frequency_domain = np.fft.fftshift(abs(np.fft.fft(np.array(data_fft))))
+    freqs = np.fft.fftshift(np.fft.fftfreq(len(data_fft),1/float(rate)))
+    doppler_freqs = freqs[np.where(np.logical_and(freqs>=f_transmit-doppler_range, freqs<=f_transmit+doppler_range))]
+    doppler_vals = frequency_domain[np.where(np.logical_and(freqs>=f_transmit-doppler_range, freqs<=f_transmit+doppler_range))]
+    return doppler_freqs, doppler_vals
+
+def heading_adjust(doppler_freqs,doppler_vals,past_freq,beta,heading,dH):
+    '''
+    Control loop that takes in frequency values and compares it to past frequencies
+    to decide what heading to turn to.
+    '''
+    freq = doppler_freqs[np.argmax(doppler_vals)]
+    dH = (freq-past_freq)*np.sign(dH)*beta
+    heading = heading + dH
+    return_val = sp.call("echo %s >> log.txt &"% str(heading), shell=True)
+    return freq, heading, dH
 
 def display_scan_options(bit_mask):
     options = []
@@ -241,6 +245,7 @@ def reset_cursor():
 
 def clear_eol():
     stdout.write('\x1b[2K')
+
 
 
 if __name__ == '__main__':
