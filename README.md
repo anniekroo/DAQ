@@ -13,14 +13,14 @@ These libraries are standard python stdlib libraries. No install should be requi
 - sys
 
 ### Numpy
-'''
+```
 pip install numpy
-'''
+```
 
-###uldaq
+### uldaq
 To install the uldaq python library, one must first install the C++ Library. The following instructions on this process were found here: https://github.com/mccdaq/uldaq/blob/master/README.md
 
-##MCC DAQ Library Install
+## MCC DAQ Library Install
 ### About
 The **uldaq** package contains programming libraries and components for developing applications using C/C++ on Linux and macOS Operating Systems. An API (Application Programming Interface) for interacting with the library in Python is available as an additional installation. This package was created and is supported by MCC. 
 
@@ -89,7 +89,6 @@ Building the **uldaq** package requires C/C++ compilers, make tool, and the deve
 Once you have successfully built this C library, you will need to download the uldaq python library. This can be done by installing it using pip:
 ```
 $ pip install uldaq
-
 ```
 
 More resources about this library can be found here: https://pypi.org/project/uldaq/.
