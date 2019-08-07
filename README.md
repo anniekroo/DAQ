@@ -21,6 +21,10 @@ pip install numpy
 To install the uldaq python library, one must first install the C++ Library. The following instructions on this process were found here: https://github.com/mccdaq/uldaq/blob/master/README.md
 
 ## MCC DAQ Library Install
+**Info:** Contains a library to access and control supported Measurement Computing [DAQ devices](https://www.mccdaq.com/PDFs/Manuals/Linux-hw.pdf) over the Linux and macOS platforms. The UL for Linux binary name is libuldaq.
+
+**Author:** Measurement Computing
+
 ### About
 The **uldaq** package contains programming libraries and components for developing applications using C/C++ on Linux and macOS Operating Systems. An API (Application Programming Interface) for interacting with the library in Python is available as an additional installation. This package was created and is supported by MCC. 
 
